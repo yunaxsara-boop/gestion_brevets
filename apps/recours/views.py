@@ -32,22 +32,24 @@ class RecoursViewSet(viewsets.ModelViewSet):
         user = request.user
         id_brevet = request.data.get("id_brevet")
 
+        # ✅ agent ajouté — peut créer un recours sur n'importe quel brevet
         if not (
             user.is_staff
             or user.is_superuser
             or user.groups.filter(name="Responsable").exists()
             or user.groups.filter(name="Directeur").exists()
+            or user.groups.filter(name="agent").exists()  # ✅ FIX
         ):
             if id_brevet:
                 from apps.brevets.models import Brevet
                 allowed_brevet = Brevet.objects.filter(
                     id_brevet=id_brevet,
-                    id_demande__id=user
+                    user=user  # ✅ FIX : user direct au lieu de id_demande__id
                 ).exists()
 
                 if not allowed_brevet:
                     return Response(
-                        {"error": "Vous ne pouvez pas creer un recours sur un brevet hors de votre perimetre."},
+                        {"error": "Vous ne pouvez pas créer un recours sur ce brevet."},
                         status=status.HTTP_403_FORBIDDEN
                     )
 
