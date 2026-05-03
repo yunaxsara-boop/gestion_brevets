@@ -16,10 +16,10 @@ class PaiementViewSet(viewsets.ModelViewSet):
         if user.is_staff or user.is_superuser:
             return Paiement.objects.all()
 
-        if user.groups.filter(name="Responsable").exists():
+        if user.groups.filter(name="responsable").exists():
             return Paiement.objects.all()
 
-        if user.groups.filter(name="Directeur").exists():
+        if user.groups.filter(name="directeur").exists():
             return Paiement.objects.all()
 
         return Paiement.objects.filter(id=user)

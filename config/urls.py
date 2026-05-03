@@ -14,6 +14,8 @@ urlpatterns = [
     path('', include('apps.recours.urls')),
     path('', include('apps.paiements.urls')),
     path('', include('apps.notifications.urls')),
+    # Ajoute cette ligne dans urlpatterns :
+path('api/chatbot/', include('apps.chatbot.urls')),
 ]
 
 if settings.DEBUG:

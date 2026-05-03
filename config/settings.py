@@ -1,8 +1,10 @@
 from pathlib import Path
+from dotenv import load_dotenv
 import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+load_dotenv(BASE_DIR / '.env')
+print("GROQ KEY:", os.environ.get('GROQ_API_KEY'))
 SECRET_KEY = 'django-insecure-u$#upa)*hm6um%sd$l6qu%gl5lkm9t1jwcgogo&(k_f=o07w$l'
 
 DEBUG = True
@@ -24,6 +26,7 @@ INSTALLED_APPS = [
     'apps.recours',
     'apps.notifications',
     'apps.dashboards',
+    'apps.chatbot',
 
     'rest_framework',
     'rest_framework.authtoken',

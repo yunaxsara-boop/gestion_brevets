@@ -20,10 +20,10 @@ class RecoursViewSet(viewsets.ModelViewSet):
         if user.is_staff or user.is_superuser:
             return Recours.objects.all()
 
-        if user.groups.filter(name="Responsable").exists():
+        if user.groups.filter(name="responsable").exists():
             return Recours.objects.all()
 
-        if user.groups.filter(name="Directeur").exists():
+        if user.groups.filter(name="directeur").exists():
             return Recours.objects.all()
 
         return Recours.objects.filter(id=user)
@@ -36,8 +36,8 @@ class RecoursViewSet(viewsets.ModelViewSet):
         if not (
             user.is_staff
             or user.is_superuser
-            or user.groups.filter(name="Responsable").exists()
-            or user.groups.filter(name="Directeur").exists()
+            or user.groups.filter(name="responsable").exists()
+            or user.groups.filter(name="directeur").exists()
             or user.groups.filter(name="agent").exists()  # ✅ FIX
         ):
             if id_brevet:
@@ -64,7 +64,7 @@ class RecoursViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def traiter_recours(self, request, pk=None):
-        if not request.user.groups.filter(name="Responsable").exists():
+        if not request.user.groups.filter(name="responsable").exists():
             return Response(
                 {"error": "Vous n'avez pas la permission de traiter un recours."},
                 status=status.HTTP_403_FORBIDDEN

@@ -6,20 +6,22 @@ import datetime
 
 class DeposantSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Deposant
+        model  = Deposant
         fields = '__all__'
 
 
 class InventeurSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Inventeur
+        model  = Inventeur
         fields = ['id_inv', 'nom_inv', 'prenom_inv', 'adress_inv']
 
 
 class DemandeBrevetSerializer(serializers.ModelSerializer):
     createur_username = serializers.SerializerMethodField(read_only=True)
     createur_id       = serializers.SerializerMethodField(read_only=True)
-    documents         = serializers.SerializerMethodField(read_only=True)  # ✅ nouveau
+    documents         = serializers.SerializerMethodField(read_only=True)
+    deposant          = serializers.SerializerMethodField(read_only=True)
+    inventeur         = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model  = DemandeBrevet
@@ -41,11 +43,18 @@ class DemandeBrevetSerializer(serializers.ModelSerializer):
     def get_createur_id(self, obj):
         return obj.id.id if obj.id else None
 
-    # ✅ Retourne les documents liés à cette demande avec URL absolue
+    def get_deposant(self, obj):
+        deps = Deposant.objects.filter(id_demande=obj)
+        return DeposantSerializer(deps, many=True).data
+
+    def get_inventeur(self, obj):
+        invs = obj.inventeurs.all()
+        return InventeurSerializer(invs, many=True).data
+
     def get_documents(self, obj):
-        docs = Document.objects.filter(id_demande=obj)
+        docs    = Document.objects.filter(id_demande=obj)
         request = self.context.get('request')
-        result = []
+        result  = []
         for doc in docs:
             fichier_url = None
             if doc.fichier:
@@ -54,23 +63,20 @@ class DemandeBrevetSerializer(serializers.ModelSerializer):
                     if request else doc.fichier.url
                 )
             result.append({
-                "id_document":    doc.id_document,
-                "nom_document":   doc.nom_document,
-                "type_document":  doc.type_document,
-                "date_ajout":     str(doc.date_ajout),
-                "fichier_url":    fichier_url,
-                "fichier_nom":    doc.fichier.name.split("/")[-1] if doc.fichier else None,
+                "id_document":   doc.id_document,
+                "nom_document":  doc.nom_document,
+                "type_document": doc.type_document,
+                "date_ajout":    str(doc.date_ajout),
+                "fichier_url":   fichier_url,
+                "fichier_nom":   doc.fichier.name.split("/")[-1] if doc.fichier else None,
             })
         return result
 
     def validate(self, data):
         today = datetime.date.today()
-        if not data.get('date_CA'):
-            data['date_CA'] = today
-        if not data.get('date_pouvoir'):
-            data['date_pouvoir'] = today
-        if not data.get('date_depo'):
-            data['date_depo'] = today
+        if not data.get('date_CA'):      data['date_CA']      = today
+        if not data.get('date_pouvoir'): data['date_pouvoir'] = today
+        if not data.get('date_depo'):    data['date_depo']    = today
         return data
 
 

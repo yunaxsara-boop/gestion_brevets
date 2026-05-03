@@ -18,7 +18,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if user.is_staff or user.is_superuser:
             return Document.objects.all()
 
-        if user.groups.filter(name__in=["Responsable", "Directeur"]).exists():
+        if user.groups.filter(name__in=["responsable", "directeur"]).exists():
             return Document.objects.all()
 
         return Document.objects.filter(id=user)

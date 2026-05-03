@@ -2,34 +2,47 @@ from django.db import models
 from django.conf import settings
 
 
+# models.py — ajouter dans DemandeBrevet
 class DemandeBrevet(models.Model):
     STATUT_CHOICES = [('valider', 'valider'), ('non_valider', 'non_valider')]
 
-    id_demande = models.AutoField(primary_key=True)
-    titre = models.TextField()
-    nature = models.CharField(max_length=100)
-    num_depo = models.IntegerField()
-    date_depo = models.DateField()
-    pays_origine = models.CharField(max_length=100)
-    numdemande_CA = models.IntegerField()
-    date_CA = models.DateField()
-    mandataire = models.CharField(max_length=255)
-    date_pouvoir = models.DateField()
+    id_demande        = models.AutoField(primary_key=True)
+    titre             = models.TextField()
+    nature            = models.CharField(max_length=100)
+    num_depo          = models.IntegerField()
+    date_depo         = models.DateField()
+    pays_origine      = models.CharField(max_length=100)
+    numdemande_CA     = models.IntegerField()
+    date_CA           = models.DateField()
+    mandataire        = models.CharField(max_length=255)
+    date_pouvoir      = models.DateField()
     prepose_reception = models.CharField(max_length=255, blank=True, default="")
-    lieu_reception = models.CharField(max_length=255, blank=True, default="")
-    date_reception = models.DateField(null=True, blank=True)
-    autre_info = models.TextField(blank=True)
-    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='non_valider')
-    id = models.ForeignKey(
+    lieu_reception    = models.CharField(max_length=255, blank=True, default="")
+    date_reception    = models.DateField(null=True, blank=True)
+    autre_info        = models.TextField(blank=True)
+    statut            = models.CharField(max_length=20, choices=STATUT_CHOICES, default='non_valider')
+    id                = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         db_column='id',
         related_name='demandes'
     )
 
+    # ✅ Champs pièces déposées
+    piece_copie_int      = models.BooleanField(default=False)
+    piece_memoire_nat    = models.BooleanField(default=False)
+    piece_memoire_fr     = models.BooleanField(default=False)
+    piece_memoire_fr_dup = models.BooleanField(default=False)
+    piece_dessins_orig   = models.BooleanField(default=False)
+    piece_dessins_dup    = models.BooleanField(default=False)
+    piece_abrege         = models.BooleanField(default=False)
+    piece_pouvoir        = models.BooleanField(default=False)
+    piece_priorite       = models.BooleanField(default=False)
+    piece_cession        = models.BooleanField(default=False)
+    piece_titre          = models.BooleanField(default=False)
+
     def __str__(self):
         return f"{self.id_demande} - {self.titre}"
-
 
 class Deposant(models.Model):
     id_dep = models.AutoField(primary_key=True)

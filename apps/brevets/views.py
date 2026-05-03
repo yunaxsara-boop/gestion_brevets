@@ -22,9 +22,9 @@ class DemandeBrevetViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_staff or user.is_superuser:
             return DemandeBrevet.objects.all()
-        if user.groups.filter(name="Responsable").exists():
+        if user.groups.filter(name="responsable").exists():
             return DemandeBrevet.objects.all()
-        if user.groups.filter(name="Directeur").exists():
+        if user.groups.filter(name="directeur").exists():
             return DemandeBrevet.objects.all()
         return DemandeBrevet.objects.filter(id=user)
 
@@ -37,7 +37,7 @@ class DemandeBrevetViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def valider_demande(self, request, pk=None):
-        if not request.user.groups.filter(name="Responsable").exists():
+        if not request.user.groups.filter(name="responsable").exists():
             return Response(
                 {"error": "Vous n'avez pas la permission de valider une demande."},
                 status=status.HTTP_403_FORBIDDEN
@@ -53,7 +53,7 @@ class DemandeBrevetViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def refuser_demande(self, request, pk=None):
-        if not request.user.groups.filter(name="Responsable").exists():
+        if not request.user.groups.filter(name="responsable").exists():
             return Response(
                 {"error": "Vous n'avez pas la permission de refuser une demande."},
                 status=status.HTTP_403_FORBIDDEN
@@ -77,9 +77,9 @@ class DeposantViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_staff or user.is_superuser:
             return Deposant.objects.all()
-        if user.groups.filter(name="Responsable").exists():
+        if user.groups.filter(name="responsable").exists():
             return Deposant.objects.all()
-        if user.groups.filter(name="Directeur").exists():
+        if user.groups.filter(name="directeur").exists():
             return Deposant.objects.all()
         return Deposant.objects.filter(id_demande__id=user)
 
@@ -93,9 +93,9 @@ class InventeurViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_staff or user.is_superuser:
             return Inventeur.objects.all()
-        if user.groups.filter(name="Responsable").exists():
+        if user.groups.filter(name="responsable").exists():
             return Inventeur.objects.all()
-        if user.groups.filter(name="Directeur").exists():
+        if user.groups.filter(name="directeur").exists():
             return Inventeur.objects.all()
         return Inventeur.objects.filter(id_demande__id=user).distinct()
 
