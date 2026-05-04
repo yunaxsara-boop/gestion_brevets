@@ -68,11 +68,19 @@ class Inventeur(models.Model):
     nom_inv    = models.CharField(max_length=100)
     prenom_inv = models.CharField(max_length=100)
     adress_inv = models.CharField(max_length=255, blank=True, default="")
-    # ✅ FK simple au lieu de ManyToMany
+
     id_demande = models.ForeignKey(
         DemandeBrevet,
         on_delete=models.CASCADE,
         db_column='id_demande',
+        null=True,
+        blank=True,
+        related_name='inventeurs'
+    )
+    # ✅ FK vers Brevet (côté Inventeur, comme id_demande)
+    id_brevet = models.ForeignKey(
+        'Brevet',
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name='inventeurs'
@@ -109,14 +117,7 @@ class Brevet(models.Model):
         null=True,
         blank=True
     )
-    # ✅ FK simple aussi pour Brevet → Inventeur
-    id_inv = models.ForeignKey(
-        'Inventeur',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='brevets'
-    )
+    # ✅ id_inv supprimé d'ici — la relation est gérée côté Inventeur
     id_dep = models.ForeignKey(
         'Deposant',
         on_delete=models.SET_NULL,

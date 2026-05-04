@@ -29,7 +29,8 @@ class DemandeBrevetViewSet(viewsets.ModelViewSet):
         return DemandeBrevet.objects.filter(id=user)
 
     def perform_create(self, serializer):
-        demande = serializer.save(id=self.request.user)
+        statut = 'valider' if self.request.user.groups.filter(name="responsable").exists() else 'non_valider'
+        demande = serializer.save(id=self.request.user, statut=statut)
         Notifications.objects.create(
             id=self.request.user,
             message=f"Votre demande '{demande.titre}' a ete creee."
@@ -148,10 +149,40 @@ class BrevetViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        # ✅ user injecté ici — ne pas l'envoyer depuis le frontend
         brevet = serializer.save(user=self.request.user)
         if brevet.id_demande:
             Notifications.objects.create(
                 id=brevet.id_demande.id,
                 message=f"Brevet créé pour la demande '{brevet.id_demande.titre}'"
             )
+
+    @action(detail=False, methods=['get'], url_path='demandes-disponibles')
+    def demandes_disponibles(self, request):
+        user = request.user
+
+        if (user.is_staff or user.is_superuser or
+                user.groups.filter(name="responsable").exists()):
+            # responsable/admin → toutes les demandes validées sans brevet
+            demandes = DemandeBrevet.objects.filter(
+                brevet__isnull=True,
+                statut='valider'
+            )
+        else:
+            # agent → uniquement SES demandes validées sans brevet
+            # Django génère "id_id" comme attribut de filtre pour une FK nommée "id"
+            demandes = DemandeBrevet.objects.filter(
+                brevet__isnull=True,
+                statut='valider',
+                id_id=user.id  # ✅ id_id car le champ FK s'appelle "id"
+            )
+
+        data = [
+            {
+                "id_demande": d.id_demande,
+                "titre":      d.titre,
+                "num_depo":   d.num_depo,
+                "date_depo":  d.date_depo,
+            }
+            for d in demandes
+        ]
+        return Response(data)

@@ -25,8 +25,6 @@ class DemandeBrevetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = DemandeBrevet
-        # ✅ FIX : '__all__' n'inclut pas les SerializerMethodField
-        # il faut tous les lister explicitement
         fields = [
             'id_demande', 'titre', 'nature', 'num_depo', 'date_depo',
             'pays_origine', 'numdemande_CA', 'date_CA', 'mandataire',
@@ -36,7 +34,6 @@ class DemandeBrevetSerializer(serializers.ModelSerializer):
             'piece_memoire_fr_dup', 'piece_dessins_orig', 'piece_dessins_dup',
             'piece_abrege', 'piece_pouvoir', 'piece_priorite',
             'piece_cession', 'piece_titre',
-            # ✅ champs calculés maintenant inclus
             'createur_username', 'createur_id', 'documents', 'deposant', 'inventeur',
         ]
         extra_kwargs = {
@@ -94,8 +91,10 @@ class DemandeBrevetSerializer(serializers.ModelSerializer):
 
 
 class BrevetSerializer(serializers.ModelSerializer):
-    id_inv = InventeurSerializer(many=True, read_only=True)
-    id_dep = DeposantSerializer(read_only=True)
+    id_inv     = serializers.SerializerMethodField()
+    id_dep     = DeposantSerializer(read_only=True)
+    # ✅ Afficher les infos de la demande liée
+    id_demande = serializers.SerializerMethodField()
 
     inventeurs_data = serializers.ListField(
         child=serializers.DictField(),
@@ -106,19 +105,42 @@ class BrevetSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
+    # ✅ Recevoir l'id de la demande depuis le frontend
+    id_demande_input = serializers.IntegerField(
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
 
     class Meta:
-        model = Brevet
+        model  = Brevet
         fields = '__all__'
         extra_kwargs = {
-            'id_dep': {'required': False},
-            'id_inv': {'required': False},
-            'user':   {'required': False},
+            'id_dep':     {'required': False},
+            'user':       {'required': False},
+            'id_demande': {'required': False},
         }
 
+    def get_id_inv(self, obj):
+        invs = obj.inventeurs.all()
+        return InventeurSerializer(invs, many=True).data
+
+    # ✅ Retourner les infos de la demande liée
+    def get_id_demande(self, obj):
+        if obj.id_demande:
+            return {
+                "id_demande": obj.id_demande.id_demande,
+                "titre":      obj.id_demande.titre,
+                "num_depo":   obj.id_demande.num_depo,
+                "date_depo":  str(obj.id_demande.date_depo),
+                "statut":     obj.id_demande.statut,
+            }
+        return None
+
     def create(self, validated_data):
-        inventeurs_data = validated_data.pop('inventeurs_data', [])
-        deposant_data   = validated_data.pop('deposant_data', None)
+        inventeurs_data  = validated_data.pop('inventeurs_data', [])
+        deposant_data    = validated_data.pop('deposant_data', None)
+        id_demande_input = validated_data.pop('id_demande_input', None)
 
         if deposant_data and (deposant_data.get('nom_dep') or deposant_data.get('prenom_dep')):
             deposant = Deposant.objects.create(
@@ -127,24 +149,42 @@ class BrevetSerializer(serializers.ModelSerializer):
             )
             validated_data['id_dep'] = deposant
 
+        # ✅ Lier la demande si fournie
+        if id_demande_input:
+            try:
+                demande = DemandeBrevet.objects.get(pk=id_demande_input)
+                validated_data['id_demande'] = demande
+            except DemandeBrevet.DoesNotExist:
+                pass
+
         brevet = Brevet.objects.create(**validated_data)
 
         for inv in inventeurs_data:
             if inv.get('nom_inv') or inv.get('prenom_inv'):
-                inventeur = Inventeur.objects.create(
+                Inventeur.objects.create(
                     nom_inv    = inv.get('nom_inv', ''),
                     prenom_inv = inv.get('prenom_inv', ''),
+                    id_brevet  = brevet,
                 )
-                brevet.id_inv.add(inventeur)
 
         return brevet
 
     def update(self, instance, validated_data):
-        inventeurs_data = validated_data.pop('inventeurs_data', None)
-        deposant_data   = validated_data.pop('deposant_data', None)
+        inventeurs_data  = validated_data.pop('inventeurs_data', None)
+        deposant_data    = validated_data.pop('deposant_data', None)
+        id_demande_input = validated_data.pop('id_demande_input', None)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+
+        # ✅ Mettre à jour la demande liée
+        if id_demande_input is not None:
+            try:
+                demande = DemandeBrevet.objects.get(pk=id_demande_input)
+                instance.id_demande = demande
+            except DemandeBrevet.DoesNotExist:
+                instance.id_demande = None
+
         instance.save()
 
         if deposant_data:
@@ -161,17 +201,20 @@ class BrevetSerializer(serializers.ModelSerializer):
                 instance.save()
 
         if inventeurs_data is not None:
-            existants = list(instance.id_inv.all())
+            existants = list(instance.inventeurs.all())
             for i, inv in enumerate(inventeurs_data):
                 if i < len(existants):
                     existants[i].nom_inv    = inv.get('nom_inv', existants[i].nom_inv)
                     existants[i].prenom_inv = inv.get('prenom_inv', existants[i].prenom_inv)
                     existants[i].save()
                 else:
-                    nouvel_inv = Inventeur.objects.create(
+                    Inventeur.objects.create(
                         nom_inv    = inv.get('nom_inv', ''),
                         prenom_inv = inv.get('prenom_inv', ''),
+                        id_brevet  = instance,
                     )
-                    instance.id_inv.add(nouvel_inv)
+            if len(inventeurs_data) < len(existants):
+                for inv_a_suppr in existants[len(inventeurs_data):]:
+                    inv_a_suppr.delete()
 
         return instance
