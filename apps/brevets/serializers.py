@@ -13,7 +13,7 @@ class DeposantSerializer(serializers.ModelSerializer):
 class InventeurSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Inventeur
-        fields = ['id_inv', 'nom_inv', 'prenom_inv', 'adress_inv']
+        fields = '__all__'
 
 
 class DemandeBrevetSerializer(serializers.ModelSerializer):
@@ -25,7 +25,20 @@ class DemandeBrevetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = DemandeBrevet
-        fields = '__all__'
+        # ✅ FIX : '__all__' n'inclut pas les SerializerMethodField
+        # il faut tous les lister explicitement
+        fields = [
+            'id_demande', 'titre', 'nature', 'num_depo', 'date_depo',
+            'pays_origine', 'numdemande_CA', 'date_CA', 'mandataire',
+            'date_pouvoir', 'prepose_reception', 'lieu_reception',
+            'date_reception', 'autre_info', 'statut', 'id',
+            'piece_copie_int', 'piece_memoire_nat', 'piece_memoire_fr',
+            'piece_memoire_fr_dup', 'piece_dessins_orig', 'piece_dessins_dup',
+            'piece_abrege', 'piece_pouvoir', 'piece_priorite',
+            'piece_cession', 'piece_titre',
+            # ✅ champs calculés maintenant inclus
+            'createur_username', 'createur_id', 'documents', 'deposant', 'inventeur',
+        ]
         extra_kwargs = {
             'id':            {'read_only': True},
             'pays_origine':  {'required': False, 'default': ''},

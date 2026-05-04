@@ -2,7 +2,6 @@ from django.db import models
 from django.conf import settings
 
 
-# models.py — ajouter dans DemandeBrevet
 class DemandeBrevet(models.Model):
     STATUT_CHOICES = [('valider', 'valider'), ('non_valider', 'non_valider')]
 
@@ -28,7 +27,6 @@ class DemandeBrevet(models.Model):
         related_name='demandes'
     )
 
-    # ✅ Champs pièces déposées
     piece_copie_int      = models.BooleanField(default=False)
     piece_memoire_nat    = models.BooleanField(default=False)
     piece_memoire_fr     = models.BooleanField(default=False)
@@ -44,21 +42,21 @@ class DemandeBrevet(models.Model):
     def __str__(self):
         return f"{self.id_demande} - {self.titre}"
 
-class Deposant(models.Model):
-    id_dep = models.AutoField(primary_key=True)
-    nom_dep = models.CharField(max_length=100)
-    prenom_dep = models.CharField(max_length=100)
-    denomination = models.CharField(max_length=255, blank=True, default="")
-    adresse_dep = models.CharField(max_length=255, blank=True, default="")
-    nationalite = models.CharField(max_length=100, blank=True, default="")
 
-    # ✅ null=True, blank=True — plus obligatoire d'avoir une demande
-    id_demande = models.ForeignKey(
+class Deposant(models.Model):
+    id_dep       = models.AutoField(primary_key=True)
+    nom_dep      = models.CharField(max_length=100)
+    prenom_dep   = models.CharField(max_length=100)
+    denomination = models.CharField(max_length=255, blank=True, default="")
+    adresse_dep  = models.CharField(max_length=255, blank=True, default="")
+    nationalite  = models.CharField(max_length=100, blank=True, default="")
+    id_demande   = models.ForeignKey(
         DemandeBrevet,
         on_delete=models.CASCADE,
         db_column='id_demande',
         null=True,
-        blank=True
+        blank=True,
+        related_name='deposants'
     )
 
     def __str__(self):
@@ -66,16 +64,18 @@ class Deposant(models.Model):
 
 
 class Inventeur(models.Model):
-    id_inv = models.AutoField(primary_key=True)
-    nom_inv = models.CharField(max_length=100)
+    id_inv     = models.AutoField(primary_key=True)
+    nom_inv    = models.CharField(max_length=100)
     prenom_inv = models.CharField(max_length=100)
     adress_inv = models.CharField(max_length=255, blank=True, default="")
-
-    # ✅ blank=True — plus obligatoire d'avoir une demande
-    id_demande = models.ManyToManyField(
+    # ✅ FK simple au lieu de ManyToMany
+    id_demande = models.ForeignKey(
         DemandeBrevet,
-        related_name='inventeurs',
-        blank=True
+        on_delete=models.CASCADE,
+        db_column='id_demande',
+        null=True,
+        blank=True,
+        related_name='inventeurs'
     )
 
     def __str__(self):
@@ -89,14 +89,14 @@ class Brevet(models.Model):
         ('EN_ATTENTE', 'EN_ATTENTE'),
     ]
 
-    id_brevet = models.AutoField(primary_key=True)
-    num_brevet = models.IntegerField()
-    titre = models.CharField(max_length=1000)
-    num_depo = models.IntegerField()
-    date_depo = models.DateField()
+    id_brevet   = models.AutoField(primary_key=True)
+    num_brevet  = models.IntegerField()
+    titre       = models.CharField(max_length=1000)
+    num_depo    = models.IntegerField()
+    date_depo   = models.DateField()
     date_sortie = models.DateField()
-    titulaire = models.CharField(max_length=255)
-    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='EN_ATTENTE')
+    titulaire   = models.CharField(max_length=255)
+    statut      = models.CharField(max_length=20, choices=STATUT_CHOICES, default='EN_ATTENTE')
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -109,8 +109,20 @@ class Brevet(models.Model):
         null=True,
         blank=True
     )
-    id_inv = models.ManyToManyField('Inventeur', related_name='brevets', blank=True)
-    id_dep = models.ForeignKey('Deposant', on_delete=models.SET_NULL, null=True, blank=True)
+    # ✅ FK simple aussi pour Brevet → Inventeur
+    id_inv = models.ForeignKey(
+        'Inventeur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='brevets'
+    )
+    id_dep = models.ForeignKey(
+        'Deposant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
 
     def __str__(self):
         return self.titre

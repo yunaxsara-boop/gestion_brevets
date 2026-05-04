@@ -9,7 +9,7 @@ class DeposantInline(admin.StackedInline):
 
 
 class InventeurInline(admin.TabularInline):
-    model = Inventeur.id_demande.through
+    model = Inventeur          # ✅ ForeignKey → on met le model directement
     extra = 1
     verbose_name = "Inventeur"
     verbose_name_plural = "Inventeurs"
@@ -24,13 +24,14 @@ class DeposantAdmin(admin.ModelAdmin):
 
 @admin.register(Inventeur)
 class InventeurAdmin(admin.ModelAdmin):
-    list_display = ('id_inv', 'nom_inv', 'prenom_inv', 'get_demandes')
+    list_display = ('id_inv', 'nom_inv', 'prenom_inv', 'get_demande')
     search_fields = ('nom_inv', 'prenom_inv', 'id_inv')
     list_filter = ('id_demande__titre',)
 
-    @admin.display(description='Demandes')
-    def get_demandes(self, obj):
-        return ", ".join([str(d.titre) for d in obj.id_demande.all()])
+    @admin.display(description='Demande')
+    def get_demande(self, obj):
+        # ✅ ForeignKey → un seul objet, pas .all()
+        return str(obj.id_demande.titre) if obj.id_demande else "—"
 
 
 @admin.register(DemandeBrevet)
@@ -58,7 +59,7 @@ class DemandeBrevetAdmin(admin.ModelAdmin):
 
 @admin.register(Brevet)
 class BrevetAdmin(admin.ModelAdmin):
-    list_display = ('id_brevet', 'num_brevet', 'titre', 'statut', 'date_sortie', 'titulaire', 'id_demande' )
+    list_display = ('id_brevet', 'num_brevet', 'titre', 'statut', 'date_sortie', 'titulaire', 'id_demande')
     list_filter = ('statut', 'date_sortie')
     search_fields = ('titre', 'num_brevet', 'titulaire')
     ordering = ('-date_sortie',)
