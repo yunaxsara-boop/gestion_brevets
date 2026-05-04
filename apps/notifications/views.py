@@ -12,6 +12,7 @@ class NotificationsViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationsSerializer
 
     def get_queryset(self):
+        # Chaque user voit uniquement ses propres notifications
         return Notifications.objects.filter(id=self.request.user)
 
     def perform_create(self, serializer):
@@ -22,4 +23,9 @@ class NotificationsViewSet(viewsets.ModelViewSet):
         notification = self.get_object()
         notification.etat = True
         notification.save()
-        return Response({'message': 'Notification marquee comme lue avec succes.'})
+        return Response({'message': 'Notification marquée comme lue.'})
+
+    @action(detail=False, methods=['post'])
+    def mark_all_as_read(self, request):
+        Notifications.objects.filter(id=request.user, etat=False).update(etat=True)
+        return Response({'message': 'Toutes les notifications marquées comme lues.'})

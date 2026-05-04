@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -11,6 +12,15 @@ from .serializers import (
     DeposantSerializer,
     InventeurSerializer,
 )
+
+User = get_user_model()
+
+
+def notifier_groupe(groupe_name, message):
+    """Envoie une notification à tous les users d'un groupe donné."""
+    users = User.objects.filter(groups__name=groupe_name)
+    for u in users:
+        Notifications.objects.create(id=u, message=message)
 
 
 class DemandeBrevetViewSet(viewsets.ModelViewSet):
@@ -31,9 +41,17 @@ class DemandeBrevetViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         statut = 'valider' if self.request.user.groups.filter(name="responsable").exists() else 'non_valider'
         demande = serializer.save(id=self.request.user, statut=statut)
+
+        # ✅ Notifier l'agent créateur
         Notifications.objects.create(
             id=self.request.user,
-            message=f"Votre demande '{demande.titre}' a ete creee."
+            message=f"Votre demande '{demande.titre}' a été créée avec succès."
+        )
+
+        # ✅ Notifier tous les responsables
+        notifier_groupe(
+            "responsable",
+            f"Nouvelle demande soumise : '{demande.titre}' par {self.request.user.username}."
         )
 
     @action(detail=True, methods=['post'])
@@ -46,9 +64,11 @@ class DemandeBrevetViewSet(viewsets.ModelViewSet):
         demande = self.get_object()
         demande.statut = "valider"
         demande.save()
+
+        # ✅ Notifier l'agent propriétaire de la demande
         Notifications.objects.create(
             id=demande.id,
-            message=f"Votre demande '{demande.titre}' a ete validee."
+            message=f"Votre demande '{demande.titre}' a été validée."
         )
         return Response({"message": "Demande validee avec succes."})
 
@@ -62,9 +82,11 @@ class DemandeBrevetViewSet(viewsets.ModelViewSet):
         demande = self.get_object()
         demande.statut = "non_valider"
         demande.save()
+
+        # ✅ Notifier l'agent propriétaire de la demande
         Notifications.objects.create(
             id=demande.id,
-            message=f"Votre demande '{demande.titre}' a ete refusee."
+            message=f"Votre demande '{demande.titre}' a été refusée."
         )
         return Response({"message": "Demande refusee avec succes."})
 
@@ -153,7 +175,7 @@ class BrevetViewSet(viewsets.ModelViewSet):
         if brevet.id_demande:
             Notifications.objects.create(
                 id=brevet.id_demande.id,
-                message=f"Brevet créé pour la demande '{brevet.id_demande.titre}'"
+                message=f"Un brevet a été créé pour votre demande '{brevet.id_demande.titre}'."
             )
 
     @action(detail=False, methods=['get'], url_path='demandes-disponibles')
@@ -169,11 +191,11 @@ class BrevetViewSet(viewsets.ModelViewSet):
             )
         else:
             # agent → uniquement SES demandes validées sans brevet
-            # Django génère "id_id" comme attribut de filtre pour une FK nommée "id"
+            # id_id car Django génère ce nom pour une FK nommée "id"
             demandes = DemandeBrevet.objects.filter(
                 brevet__isnull=True,
                 statut='valider',
-                id_id=user.id  # ✅ id_id car le champ FK s'appelle "id"
+                id_id=user.id
             )
 
         data = [
