@@ -19,6 +19,7 @@ class InventeurSerializer(serializers.ModelSerializer):
 class DemandeBrevetSerializer(serializers.ModelSerializer):
     createur_username = serializers.SerializerMethodField(read_only=True)
     createur_id       = serializers.SerializerMethodField(read_only=True)
+    createur_groupe   = serializers.SerializerMethodField(read_only=True)
     documents         = serializers.SerializerMethodField(read_only=True)
     deposant          = serializers.SerializerMethodField(read_only=True)
     inventeur         = serializers.SerializerMethodField(read_only=True)
@@ -34,7 +35,8 @@ class DemandeBrevetSerializer(serializers.ModelSerializer):
             'piece_memoire_fr_dup', 'piece_dessins_orig', 'piece_dessins_dup',
             'piece_abrege', 'piece_pouvoir', 'piece_priorite',
             'piece_cession', 'piece_titre',
-            'createur_username', 'createur_id', 'documents', 'deposant', 'inventeur',
+            'createur_username', 'createur_id', 'createur_groupe',
+            'documents', 'deposant', 'inventeur',
         ]
         extra_kwargs = {
             'id':            {'read_only': True},
@@ -52,6 +54,15 @@ class DemandeBrevetSerializer(serializers.ModelSerializer):
 
     def get_createur_id(self, obj):
         return obj.id.id if obj.id else None
+
+    def get_createur_groupe(self, obj):
+        if obj.id:
+            groups = list(obj.id.groups.values_list('name', flat=True))
+            if 'responsable' in groups:
+                return 'responsable'
+            if 'agent' in groups:
+                return 'agent'
+        return 'inconnu'
 
     def get_deposant(self, obj):
         deps = Deposant.objects.filter(id_demande=obj)
@@ -93,7 +104,6 @@ class DemandeBrevetSerializer(serializers.ModelSerializer):
 class BrevetSerializer(serializers.ModelSerializer):
     id_inv     = serializers.SerializerMethodField()
     id_dep     = DeposantSerializer(read_only=True)
-    # ✅ Afficher les infos de la demande liée
     id_demande = serializers.SerializerMethodField()
 
     inventeurs_data = serializers.ListField(
@@ -105,7 +115,6 @@ class BrevetSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
-    # ✅ Recevoir l'id de la demande depuis le frontend
     id_demande_input = serializers.IntegerField(
         write_only=True,
         required=False,
@@ -125,7 +134,6 @@ class BrevetSerializer(serializers.ModelSerializer):
         invs = obj.inventeurs.all()
         return InventeurSerializer(invs, many=True).data
 
-    # ✅ Retourner les infos de la demande liée
     def get_id_demande(self, obj):
         if obj.id_demande:
             return {
@@ -149,7 +157,6 @@ class BrevetSerializer(serializers.ModelSerializer):
             )
             validated_data['id_dep'] = deposant
 
-        # ✅ Lier la demande si fournie
         if id_demande_input:
             try:
                 demande = DemandeBrevet.objects.get(pk=id_demande_input)
@@ -177,7 +184,6 @@ class BrevetSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
-        # ✅ Mettre à jour la demande liée
         if id_demande_input is not None:
             try:
                 demande = DemandeBrevet.objects.get(pk=id_demande_input)
